@@ -1,0 +1,46 @@
+# GPT-5.4 Enhanced PPT Desensitization Tool Requirements
+# Core dependencies for PowerPoint processing and AI enhancement
+
+# PowerPoint processing
+python-pptx>=0.6.21
+openpyxl>=3.0.9
+python-docx>=0.8.11
+
+# Data processing
+pandas>=1.5.0
+numpy>=1.21.0
+
+# AI/ML enhancements (for GPT integration)
+transformers>=4.21.0
+torch>=1.12.0
+
+# Text processing and pattern matching
+regex>=2022.9.13
+jieba>=0.42.1
+
+# Configuration and utilities
+pyyaml>=6.0
+click>=8.1.0
+
+# Logging and monitoring
+colorlog>=6.6.0
+
+# Testing and validation
+pytest>=7.1.0
+pytest-cov>=4.0.0
+
+# Optional: For advanced chart processing
+matplotlib>=3.5.0
+seaborn>=0.11.0
+
+# Optional: For PDF processing (if needed)
+PyPDF2>=2.10.0
+
+# Optional: For image processing (if needed)
+Pillow>=9.0.0
+opencv-python>=4.6.0
+
+# Development tools
+black>=22.0.0
+flake8>=5.0.0
+mypy>=0.991
