@@ -1,268 +1,55 @@
-# GPT-5.4 Enhanced PPT Desensitization Tool
+# skill_creptoout
 
-## Overview
+用于对业务类 `PPTX` 文件做脱敏处理，重点脱敏经营结果值、图表展示值、客户名称，同时尽量保留标题、时间、术语、序号和工作举措。
 
-This is an advanced PowerPoint desensitization tool enhanced with GPT-5.4 AI capabilities. It intelligently redacts sensitive business data, customer information, and financial numbers while preserving titles, operational labels, and chart structures.
+## 适用场景
 
-## Features
+- 对外分享经营汇报材料前做脱敏
+- 对图表、表格、客户清单做统一口径脱敏
+- 保留章节标题、时间标签、路径编号、能力术语
+- 将同页正文与表格中的勾稽数据一起脱敏
 
-### 🧠 GPT-5.4 AI Enhancement
-- **Context-Aware Processing**: Uses AI to understand content context and make intelligent redaction decisions
-- **Smart Pattern Recognition**: Enhanced pattern matching for Chinese and international data formats
-- **Adaptive Learning**: Learns from processing patterns to improve accuracy
+## 当前能力
 
-### 📊 Advanced Desensitization
-- **Multi-Format Support**: Phone numbers, emails, ID cards, bank cards, business numbers
-- **Financial Data**: Smart redaction of currency amounts while preserving context
-- **Customer Information**: Intelligent name and company detection
-- **Address Processing**: Chinese and international address formats
+- 保留标题：
+  - 章节标题、封面标题、图表标题、目录标题
+  - 标题编号如 `1.3`、`1.4`、`2.2`
+- 保留工作举措：
+  - 如 `三个50%`、`1个原则`、`2大运营`、`3大主业`
+  - 如 `1个关键人+1个联系人`
+- 保留术语：
+  - 如 `5G`、`2G`、`6+N`
+- 脱敏结果值：
+  - 收入、增幅、份额、占比、回款、规模、商机、完成率、目标值、到达值
+- 脱敏客户名称：
+  - 客户主体名、项目清单中的公司名、表格中的客户列
+- 脱敏表格勾稽值：
+  - `KPI`、各地市完成情况、智算项目、劳动竞赛、千万大单等页中的联动结果值
 
-### 🎯 Intelligent Preservation
-- **Title Protection**: Automatically preserves slide titles and headers
-- **Operational Labels**: Keeps operational indicators and labels
-- **Chart Structure**: Maintains chart titles, axis labels, and legends
-- **Context Awareness**: Uses AI to determine what should be preserved
+## 使用方法
 
-### 📈 Processing Capabilities
-- **Single File Processing**: Process individual PPT files
-- **Batch Processing**: Handle entire directories of presentations
-- **XML-Level Processing**: Deep processing of embedded XML content
-- **Audit Trail**: Comprehensive logging and reporting
-
-## Installation
-
-1. **Clone or download the tool**
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Verify installation**:
-   ```bash
-   python ppt_desensitization_app.py --validate
-   ```
-
-## Usage
-
-### Command Line Interface
-
-#### Process Single File
-```bash
-# Basic processing
-python ppt_desensitization_app.py input.pptx
-
-# Custom output location
-python ppt_desensitization_app.py input.pptx -o output.pptx
-
-# With custom configuration
-python ppt_desensitization_app.py input.pptx -c custom_config.json
+```powershell
+python skill_creptoout.py `
+  "C:\path\input.pptx" `
+  "C:\path\output_redacted.pptx" `
+  --verify
 ```
 
-#### Batch Processing
-```bash
-# Process all PPT files in directory
-python ppt_desensitization_app.py /path/to/ppt/files/
+## 输出说明
 
-# Specify output directory
-python ppt_desensitization_app.py /path/to/input/ -d /path/to/output/
-```
+- `files_touched`：修改过的 XML 文件数
+- `text_nodes_changed`：被改写的文本节点数
+- `chart_numfmt_set`：图表数值格式被设置为 `xxx` 的次数
+- `--verify`：输出剩余带数字的文本节点数量，便于人工复核
 
-#### Advanced Options
-```bash
-# Enable verbose logging
-python ppt_desensitization_app.py input.pptx -v
+## 仓库文件
 
-# Validate configuration only
-python ppt_desensitization_app.py --validate
+- `SKILL.md`：Trae 技能定义和说明
+- `skill_creptoout.py`：核心脱敏脚本
+- `README.md`：公开仓库使用说明
 
-# Get help
-python ppt_desensitization_app.py --help
-```
+## 注意事项
 
-### Configuration
-
-The tool uses a JSON configuration file (`desensitization_config.json`) for customization:
-
-```json
-{
-  "preserve_titles": true,
-  "preserve_operational_labels": true,
-  "ai_enhancement": true,
-  "ai_confidence_threshold": 0.85,
-  "whitelist_words": ["标题", "操作", "标签"],
-  "custom_patterns": [
-    {
-      "pattern": "[\\u4e00-\\u9fa5]+(?:银行|证券|保险)",
-      "replacement": "[FINANCIAL_INSTITUTION_REDACTED]",
-      "priority": 3
-    }
-  ]
-}
-```
-
-### Key Configuration Options
-
-- **`preserve_titles`**: Keep slide titles and headers
-- **`preserve_operational_labels`**: Maintain operational indicators
-- **`ai_enhancement`**: Enable GPT-5.4 AI processing
-- **`ai_confidence_threshold`**: Confidence level for AI decisions (0.0-1.0)
-- **`whitelist_words`**: Words that should never be redacted
-- **`custom_patterns`**: Custom regex patterns for specific needs
-
-## Supported Data Types
-
-### Personal Information
-- Chinese phone numbers: `13812345678`
-- International formats: `+86-138-1234-5678`
-- Email addresses: `user@example.com`
-- Chinese ID cards: `11010519900307283X`
-
-### Financial Data
-- Bank card numbers: `6222001234567890123`
-- Currency amounts: `￥1,234,567.89` or `1234.56万元`
-- Business registration numbers
-
-### Business Information
-- Customer names and company names
-- Project codes and IDs
-- Financial institution names
-- Addresses (Chinese and international)
-
-## GPT-5.4 AI Features
-
-### Context Awareness
-The AI model analyzes content context to make intelligent decisions:
-- Distinguishes between data and operational labels
-- Identifies chart titles vs. data labels
-- Recognizes presentation structure
-
-### Smart Redaction
-- **Financial Data**: Preserves currency symbols while redacting amounts
-- **Names**: Maintains sentence structure while removing personal names
-- **Dates**: Intelligent date format recognition and processing
-
-### Learning Capabilities
-- Adapts to different presentation styles
-- Learns from user corrections
-- Improves accuracy over time
-
-## Output and Reporting
-
-### Generated Files
-- **Desensitized PPT**: `input_desensitized.pptx`
-- **Audit Report**: `input_audit_report.json`
-- **Summary Report**: `input_summary.json`
-- **Processing Log**: `ppt_desensitization.log`
-
-### Report Contents
-```json
-{
-  "input_file": "input.pptx",
-  "output_file": "output.pptx",
-  "processing_time_seconds": 12.34,
-  "redaction_accuracy": 95.2,
-  "preservation_accuracy": 98.1,
-  "statistics": {
-    "slides_processed": 10,
-    "text_elements_processed": 150,
-    "redactions_applied": 45
-  }
-}
-```
-
-## Performance Optimization
-
-### Processing Speed
-- Single file: ~10-30 seconds per presentation
-- Batch processing: Optimized for multiple files
-- Memory usage: Efficient handling of large files
-
-### Accuracy Metrics
-- **Redaction Accuracy**: >95% for standard patterns
-- **Preservation Accuracy**: >98% for titles and labels
-- **False Positive Rate**: <2% with AI enhancement
-
-## Error Handling
-
-### Common Issues
-1. **File Format**: Only supports PPTX and PPT formats
-2. **File Size**: Maximum 50MB per file (configurable)
-3. **Memory**: Automatic cleanup for large files
-4. **Corruption**: Graceful handling of corrupted files
-
-### Troubleshooting
-- Check file permissions
-- Verify PowerPoint format compatibility
-- Review configuration settings
-- Check available disk space
-
-## Security Considerations
-
-### Data Privacy
-- No data transmission to external servers
-- Local processing only
-- Configurable audit trail
-- Secure handling of sensitive information
-
-### Access Control
-- File system permissions respected
-- Audit logs for compliance
-- Configurable retention policies
-
-## Advanced Usage
-
-### Custom Patterns
-Add custom regex patterns in configuration:
-```json
-{
-  "custom_patterns": [
-    {
-      "pattern": "项目编号[:：]\\s*[A-Z0-9-]+",
-      "replacement": "[PROJECT_CODE_REDACTED]",
-      "priority": 2,
-      "description": "Project codes"
-    }
-  ]
-}
-```
-
-### API Integration
-Use as a library in other Python applications:
-```python
-from ppt_desensitizer import GPTEnhancedDesensitizer
-from ppt_processor import PowerPointProcessor
-
-desensitizer = GPTEnhancedDesensitizer('config.json')
-processor = PowerPointProcessor(desensitizer)
-success = processor.process_presentation('input.pptx', 'output.pptx')
-```
-
-## Contributing
-
-### Development Setup
-1. Fork the repository
-2. Create virtual environment: `python -m venv venv`
-3. Install dev dependencies: `pip install -r requirements.txt`
-4. Run tests: `pytest`
-
-### Adding New Patterns
-1. Add pattern to `desensitization_config.json`
-2. Test with sample files
-3. Update documentation
-4. Submit pull request
-
-## License
-
-This tool is provided as-is for PPT desensitization purposes. Ensure compliance with your organization's data handling policies.
-
-## Support
-
-For issues and questions:
-1. Check the troubleshooting section
-2. Review configuration examples
-3. Check processing logs
-4. Submit detailed issue reports
-
----
-
-**Note**: This tool uses GPT-5.4 AI enhancement for intelligent processing. Results may vary based on content complexity and AI model performance.
+- 当前只处理 `.pptx`
+- 规则基于政企经营类 PPT 沉淀，迁移到其他行业建议二次校准
+- 最终交付前建议人工抽查标题页、图表页、表格页、客户名称页
