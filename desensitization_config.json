@@ -1,0 +1,85 @@
+{
+  "preserve_titles": true,
+  "preserve_operational_labels": true,
+  "aggressive_mode": false,
+  "ai_enhancement": true,
+  "ai_confidence_threshold": 0.85,
+  "gpt_model": "gpt-5.4",
+  "whitelist_words": [
+    "标题", "Title", "操作", "Operational", "标签", "Label",
+    "说明", "Description", "注释", "Note", "备注", "Remark",
+    "图", "Chart", "表", "Table", "图例", "Legend",
+    "目录", "目录页",
+    "1.1整体情况", "1.2整体情况", "1.6劳动竞赛", "2.1客群运营", "2.2三大主业", "2.4基础管理", "重点工作1", "重点工作5", "整体情况", "劳动竞赛", "客群运营", "三大主业", "基础管理", "业务增收", "省", "全省", "四省", "浙江", "江苏", "广东", "山东",
+    "宁波", "台州", "金华", "丽水", "杭州", "温州", "嘉兴", "绍兴", "湖州", "衢州", "舟山",
+    "杭", "宁", "温", "金", "台", "嘉", "绍", "湖", "丽", "衢", "舟",
+    "1月", "2月", "2025年", "2026年", "2024", "2025", "2026", "24年", "25年", "26年", "十五五", "ICT-9one", "13项指标", "一企一案", "6+N",
+    "六个方面", "1个原则", "2项要求", "3大攻坚", "6个专项", "25项工作", "1紧扣", "3聚力", "6实现", "8推进", "八方面",
+    "一三六八", "1234", "三个50%", "三个提升", "2大运营", "4项保障", "10项",
+    "139家", "1390家", "13900家", "139000家", "500强", "前50总部",
+    "1UCU=1元/天"
+  ],
+  "whitelist_patterns": [
+    "^图\\s*\\d+$", "^表\\s*\\d+$", "^图表\\s*\\d+$",
+    "^\\d{4}年\\d{1,2}月$", "^\\d{1,2}月$", "整体情况\\s*\\(\\d+/\\d+\\)",
+    "客群运营.*\\(\\d+/\\d+\\)", "业务增收.*\\(\\d+/\\d+\\)", "重点工作\\d+",
+    "\\d{1,2}月收入（亿元）", "^因?\\d{2}年$", "^\\d{2}年\\d{1,2}月$",
+    "\\（\\d+分\\）", "\\(\\d+分\\)", "^\\d+项指标", "^截至\\d{1,2}月\\d{1,2}日$", "^\\d{2}年\\d{1,2}月底前$",
+    "^\\d+生产单元", "^较\\d{2}年\\d{1,2}月$", "按高产.*中产.*低产.*分组",
+    "^[一二三四五六七八九十\\d]+个[方面原则专项]", "^[一二三四五六七八九十\\d]+项[要求工作任务保障重点]", "^[一二三四五六七八九十\\d]+大[攻坚主业能力运营]",
+    "^0\\d$", "^\\d{4}$", "^\\d{2}年$", "^\\d{1,2}\\.$",
+    "〔\\d{4}〕\\d+号", "第\\d+名",
+    "\\d+(?:\\.\\d+)?UCU/[核台GB]+"
+  ],
+  "custom_patterns": [
+    {
+      "pattern": "[\\u4e00-\\u9fa5]+(?:银行|证券|保险|基金|投资|金融)",
+      "replacement": "[FINANCIAL_INSTITUTION_REDACTED]",
+      "priority": 3,
+      "description": "Financial institution names"
+    },
+    {
+      "pattern": "\\d{4}年\\d{1,2}月\\d{1,2}日",
+      "replacement": "[DATE_REDACTED]",
+      "priority": 1,
+      "description": "Specific dates"
+    },
+    {
+      "pattern": "项目编号[:：]\\s*[A-Z0-9-]+",
+      "replacement": "[PROJECT_CODE_REDACTED]",
+      "priority": 2,
+      "description": "Project codes and IDs"
+    }
+  ],
+  "blacklist_patterns": [
+    "内部资料", "机密", "绝密", "保密", "Internal Use Only"
+  ],
+  "context_aware_settings": {
+    "preserve_chart_titles": true,
+    "preserve_axis_labels": true,
+    "preserve_legend_text": true,
+    "smart_financial_redaction": true,
+    "smart_name_detection": true
+  },
+  "output_settings": {
+    "add_redaction_markers": true,
+    "preserve_formatting": true,
+    "generate_audit_log": true,
+    "output_statistics": true
+  },
+  "performance_settings": {
+    "batch_size": 100,
+    "max_file_size_mb": 50,
+    "timeout_seconds": 300,
+    "memory_limit_mb": 512
+  },
+  "ai_model_settings": {
+    "gpt_5_4": {
+      "temperature": 0.1,
+      "max_tokens": 1000,
+      "top_p": 0.9,
+      "frequency_penalty": 0.1,
+      "presence_penalty": 0.1
+    }
+  }
+}
