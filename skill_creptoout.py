@@ -64,6 +64,10 @@ _SENSITIVE_METRIC_KEYWORDS = (
     "金额",
     "回款",
     "商机",
+    "支撑",
+    "交付",
+    "应验",
+    "未验",
     "员工",
     "队伍",
     "完成率",
@@ -128,6 +132,7 @@ _DIRECTORY_TITLE_KEYWORDS = (
     "整体回顾",
     "工作部署",
     "智算专题",
+    "重点分析及工作部署",
 )
 _TITLE_TEXT_KEYWORDS = (
     "不足",
@@ -350,6 +355,39 @@ _SENSITIVE_WORD_UNITS = (
     "PP",
     "pp",
 )
+_TABLE_RESULT_HINT_KEYWORDS = (
+    "收入",
+    "增幅",
+    "同比",
+    "环比",
+    "占比",
+    "份额",
+    "贡献",
+    "纳管",
+    "渗透率",
+    "完成率",
+    "到达值",
+    "目标值",
+    "净增",
+    "拓展",
+    "对标",
+    "行业",
+    "地市",
+    "同组",
+    "结构",
+    "覆盖",
+    "走访",
+    "全省",
+    "战客",
+)
+_LABOR_WEIGHT_KEEP_KEYWORDS = (
+    "总得分",
+    "政企收入",
+    "客群运营",
+    "通信业务",
+    "算力服务",
+    "智能服务",
+)
 _SENSITIVE_NAMES = (
     "字节跳动",
     "字节",
@@ -364,6 +402,8 @@ _SENSITIVE_NAMES = (
     "哔哩哔哩",
     "蚂蚁金服",
     "蚂蚁",
+    "华为",
+    "华为云",
 )
 _ORG_NAME_KEYWORDS = (
     "有限公司",
@@ -404,6 +444,13 @@ _GENERIC_LABEL_KEYWORDS = (
     "省直管",
     "地市",
 )
+_GENERIC_ORG_PHRASES = (
+    "集团公司",
+    "省公司",
+    "市公司",
+    "总部",
+    "分公司",
+)
 
 
 @dataclass
@@ -434,6 +481,8 @@ def _looks_like_customer_name(s: str) -> bool:
     if "客户名称" in text or "集团名称" in text:
         return False
     if any(ch.isdigit() for ch in text):
+        return False
+    if any(p in text for p in _GENERIC_ORG_PHRASES):
         return False
     if any(sep in text for sep in ("，", "、", ",", "|", " ")):
         return False
@@ -549,6 +598,37 @@ def _is_result_context(around: str, slide_text: str = "") -> bool:
     return any(k in context for k in _RESULT_ORIENTED_VERBS)
 
 
+def _is_business_result_slide(slide_text: str) -> bool:
+    hit = sum(1 for k in _TABLE_RESULT_HINT_KEYWORDS if k in slide_text)
+    return hit >= 2
+
+
+def _is_strategic_slogan_percent(around: str) -> bool:
+    compact = around.replace(" ", "")
+    if "三个" in compact and any(k in compact for k in ("经营发展目标", "三个提升")):
+        return True
+    if any(k in compact for k in ("1个原则", "2大运营", "3大主业", "4项保障", "10项重点工作")):
+        return True
+    if any(k in compact for k in ("六个方面工作", "八项重点任务")):
+        return True
+    return False
+
+
+def _iter_paragraphs_with_context(root: ET.Element) -> list[tuple[ET.Element, bool]]:
+    out: list[tuple[ET.Element, bool]] = []
+
+    def walk(node: ET.Element, in_table: bool) -> None:
+        local = _local(node.tag)
+        now_in_table = in_table or local == "tc"
+        if local == "p":
+            out.append((node, now_in_table))
+        for ch in list(node):
+            walk(ch, now_in_table)
+
+    walk(root, False)
+    return out
+
+
 def _is_project_table_text(s: str, slide_text: str = "") -> bool:
     text = s.strip().strip("“”\"'")
     if not text:
@@ -586,12 +666,58 @@ def _is_project_table_text(s: str, slide_text: str = "") -> bool:
     return False
 
 
+def _is_project_name_cell(s: str, slide_text: str = "", in_table: bool = False) -> bool:
+    text = s.strip().strip("“”\"'")
+    if not text:
+        return False
+    if not in_table:
+        return False
+    if "项目名称" not in slide_text:
+        return False
+    if any(k in slide_text for k in ("中标金额", "业主单位", "地市", "月份")):
+        if text in _PROJECT_TABLE_HEADERS or text in _CITY_LABELS:
+            return False
+        if any(k in text for k in ("项目名称", "中标金额", "业主单位", "地市", "月份")):
+            return False
+        if len(text) > 60:
+            return False
+        if not any("\u4e00" <= ch <= "\u9fff" for ch in text):
+            return False
+        return True
+    return False
+
+
+def _is_project_name_context_text(s: str, slide_text: str = "", in_table: bool = False) -> bool:
+    text = s.strip().strip("“”\"'")
+    if not text:
+        return False
+    if in_table:
+        return False
+    hint_hits = sum(
+        1
+        for k in ("项目名称", "中标金额", "业主单位", "千万商机下千万元单商机", "项目")
+        if k in slide_text
+    )
+    if hint_hits < 2:
+        return False
+    if len(text) < 6 or len(text) > 60:
+        return False
+    if not any("\u4e00" <= ch <= "\u9fff" for ch in text):
+        return False
+    if any(k in text for k in ("月份", "地市", "业主单位", "中标金额", "项目名称")):
+        return False
+    if any(k in text for k in ("项目", "工程", "系统", "平台", "建设", "服务", "改造")):
+        return True
+    return False
+
+
 def _should_redact_number(
     s: str,
     start: int,
     end: int,
     slide_text: str = "",
     underlined: bool = False,
+    in_table: bool = False,
 ) -> bool:
     prev_ch = s[start - 1] if start > 0 else ""
     next_ch = s[end] if end < len(s) else ""
@@ -608,6 +734,18 @@ def _should_redact_number(
 
     if start == 0 and _RE_TITLE_SERIAL.match(token) and any(
         k in slide_text for k in _TITLE_HINT_KEYWORDS
+    ):
+        return False
+
+    if (
+        start == 0
+        and _RE_TITLE_SERIAL.match(token)
+        and len(s.strip()) <= 26
+        and next_sig not in _SENSITIVE_UNITS
+        and next_sig2 not in _SENSITIVE_WORD_UNITS
+        and "，" not in s
+        and "," not in s
+        and "。" not in s
     ):
         return False
 
@@ -646,7 +784,7 @@ def _should_redact_number(
     ):
         return False
 
-    if token.isdigit() and next_sig == "G":
+    if token in ("2", "3", "4", "5") and next_sig == "G":
         return False
 
     if next_non_space.startswith("KPI") and "." in token:
@@ -659,18 +797,36 @@ def _should_redact_number(
         return True
 
     if next_sig in ("%", "％"):
-        strategic_hit = any(k in around for k in _STRATEGIC_SLOGAN_KEYWORDS) or any(
-            k in slide_text for k in _STRATEGIC_SLOGAN_KEYWORDS
-        )
-        if strategic_hit and not _is_result_context(around, slide_text):
-            return False
-        if _is_result_context(around, slide_text):
+        # Only use local text window for slogan detection to avoid slide-level false keeps.
+        if _is_result_context(around, ""):
             return True
+        if _is_strategic_slogan_percent(around):
+            return False
+        if _is_business_result_slide(slide_text):
+            return True
+
+    if "PP" in around.upper():
+        return True
 
     if next_sig in ("个", "大", "项") and any(
         k in around for k in ("原则", "运营", "主业", "保障", "重点工作")
     ):
         return False
+
+    if next_sig in ("条", "项") and any(
+        k in around for k in ("主线", "路径", "工作规划", "工作计划", "拓展路径")
+    ):
+        return False
+
+    if (
+        in_table
+        and next_sig == "分"
+        and any(k in around for k in _LABOR_WEIGHT_KEEP_KEYWORDS)
+    ):
+        return False
+
+    if in_table and _is_business_result_slide(slide_text):
+        return True
 
     if any(k in around for k in _TIME_SENSITIVE_VALUE_KEYWORDS):
         return True
@@ -729,6 +885,13 @@ def _should_redact_number(
     ):
         return False
 
+    if _is_business_result_slide(slide_text):
+        if re.fullmatch(r"\s*[-+]?\d[\d,]*([.]\d+)?\s*", s):
+            return True
+
+    if next_sig in ("G", "T") and any(k in around for k in ("带宽", "裁撤", "TOP客户", "新增")):
+        return True
+
     if any(k in around for k in _SENSITIVE_METRIC_KEYWORDS):
         return True
 
@@ -783,6 +946,7 @@ def _redact_text(
     base_offset: int = 0,
     slide_text: str = "",
     underlined: bool = False,
+    in_table: bool = False,
 ) -> str:
     context = full_text if full_text is not None else s
 
@@ -795,6 +959,7 @@ def _redact_text(
             end,
             slide_text=slide_text,
             underlined=underlined,
+            in_table=in_table,
         ):
             return "xxx"
         return m.group(0)
@@ -832,9 +997,7 @@ def _xml_redact_a_t(xml_bytes: bytes) -> tuple[bytes, int]:
     changed = 0
     doc_text_nodes = [el for el in root.iter() if _local(el.tag) == "t" and el.text]
     doc_text = "".join(el.text or "" for el in doc_text_nodes)
-    for para in root.iter():
-        if _local(para.tag) != "p":
-            continue
+    for para, in_table in _iter_paragraphs_with_context(root):
 
         text_nodes = _paragraph_text_nodes(para)
         if not text_nodes:
@@ -846,25 +1009,71 @@ def _xml_redact_a_t(xml_bytes: bytes) -> tuple[bytes, int]:
         offset = 0
         for el, underlined in text_nodes:
             original = el.text or ""
-            if cover_slide or paragraph_is_title or _is_title_text(original, slide_text=doc_text):
+            is_title_like = paragraph_is_title or _is_title_text(original, slide_text=doc_text)
+            if cover_slide:
                 offset += len(original)
                 continue
-            new_text = _redact_text(
-                original,
-                full_text=full_text,
-                base_offset=offset,
-                slide_text=doc_text,
-                underlined=underlined,
-            )
+            if (
+                in_table
+                and _is_business_result_slide(doc_text)
+                and not is_title_like
+                and not any(k in full_text for k in _LABOR_WEIGHT_KEEP_KEYWORDS)
+            ):
+                # Fallback for embedded table containers where context matching is weak:
+                # redact all numeric tokens in result tables, while preserving common non-sensitive tech labels.
+                if re.search(r"(5G|2G|6\+N|UCU|20\d{2}年|\d{1,2}月)", original):
+                    new_text = _redact_text(
+                        original,
+                        full_text=full_text,
+                        base_offset=offset,
+                        slide_text=doc_text,
+                        underlined=underlined,
+                        in_table=in_table,
+                    )
+                else:
+                    new_text = _RE_NUMBER.sub("xxx", original)
+            else:
+                new_text = _redact_text(
+                    original,
+                    full_text=full_text,
+                    base_offset=offset,
+                    slide_text=doc_text,
+                    underlined=underlined,
+                    in_table=in_table,
+                )
+            # Keep directory item titles readable: do not whole-mask them as customer/project names.
+            if "目录" in doc_text and is_title_like:
+                if new_text != original:
+                    el.text = new_text
+                    changed += 1
+                offset += len(original)
+                continue
             new_text = _redact_sensitive_names(new_text)
             if _looks_like_customer_name(new_text):
                 new_text = "xxx"
-            elif _is_project_table_text(new_text, slide_text=doc_text):
+            elif in_table and _is_project_table_text(new_text, slide_text=doc_text):
+                new_text = "xxx"
+            elif _is_project_name_cell(new_text, slide_text=doc_text, in_table=in_table):
+                new_text = "xxx"
+            elif _is_project_name_context_text(new_text, slide_text=doc_text, in_table=in_table):
                 new_text = "xxx"
             if new_text != original:
                 el.text = new_text
                 changed += 1
             offset += len(original)
+
+    # Force-fix residual PP expressions such as "2.3PP" that may escape title/context branches.
+    for el in root.iter():
+        if _local(el.tag) != "t" or not el.text:
+            continue
+        txt = el.text
+        if re.search(r"\d[\d,]*([.]\d+)?\s*(PP|pp)", txt):
+            if _is_strategic_slogan_percent(txt):
+                continue
+            new_txt = _RE_NUMBER.sub("xxx", txt)
+            if new_txt != txt:
+                el.text = new_txt
+                changed += 1
 
     if changed == 0:
         return xml_bytes, 0
