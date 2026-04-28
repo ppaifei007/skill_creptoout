@@ -379,6 +379,13 @@ _TABLE_RESULT_HINT_KEYWORDS = (
     "走访",
     "全省",
     "战客",
+    "结算",
+    "毛益",
+    "成本",
+    "变动金额",
+    "变动幅度",
+    "结算金额",
+    "B市场收入",
 )
 _LABOR_WEIGHT_KEEP_KEYWORDS = (
     "总得分",
@@ -598,6 +605,19 @@ def _is_result_context(around: str, slide_text: str = "") -> bool:
     return any(k in context for k in _RESULT_ORIENTED_VERBS)
 
 
+def _is_title_serial_token(token: str) -> bool:
+    if not _RE_TITLE_SERIAL.match(token):
+        return False
+    parts = token.split(".")
+    if not parts or not all(p.isdigit() for p in parts):
+        return False
+    if int(parts[0]) > 20:
+        return False
+    if any(int(p) > 20 for p in parts[1:]):
+        return False
+    return True
+
+
 def _is_business_result_slide(slide_text: str) -> bool:
     hit = sum(1 for k in _TABLE_RESULT_HINT_KEYWORDS if k in slide_text)
     return hit >= 2
@@ -732,14 +752,28 @@ def _should_redact_number(
     if _RE_PAGINATION.match(s.strip()):
         return False
 
-    if start == 0 and _RE_TITLE_SERIAL.match(token) and any(
+    if not in_table and _RE_SHORT_SERIAL.match(s.strip()) and len(s.strip()) <= 2:
+        return False
+
+    if start == 0 and _is_title_serial_token(token) and any(
         k in slide_text for k in _TITLE_HINT_KEYWORDS
     ):
         return False
 
+    if start == 0 and _is_title_serial_token(token):
+        tail = s[end:].lstrip()
+        if tail and any(ch.isdigit() for ch in tail[:8]):
+            pass
+        elif tail and (
+            "|" in s
+            or "｜" in s
+            or any(k in tail for k in ("整体", "专题", "结算", "贡献毛益", "工作", "客群"))
+        ):
+            return False
+
     if (
         start == 0
-        and _RE_TITLE_SERIAL.match(token)
+        and _is_title_serial_token(token)
         and len(s.strip()) <= 26
         and next_sig not in _SENSITIVE_UNITS
         and next_sig2 not in _SENSITIVE_WORD_UNITS
@@ -886,7 +920,7 @@ def _should_redact_number(
         return False
 
     if _is_business_result_slide(slide_text):
-        if re.fullmatch(r"\s*[-+]?\d[\d,]*([.]\d+)?\s*", s):
+        if any(ch.isdigit() for ch in token):
             return True
 
     if next_sig in ("G", "T") and any(k in around for k in ("带宽", "裁撤", "TOP客户", "新增")):
